@@ -1,4 +1,5 @@
 import os
+
 import requests
 import numpy as np
 import pandas as pd
@@ -21,10 +22,7 @@ def fetch_local_vegetarian_data(location_string: str) -> pd.DataFrame:
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
-        "X-Goog-FieldMask": (
-            "places.displayName,places.rating,places.userRatingCount,places.priceLevel,"
-            "places.vegetarianServed,places.veganServed,places.location,places.formattedAddress"
-        )
+        "X-Goog-FieldMask": "places.displayName,places.rating,places.userRatingCount,places.priceLevel,places.servesVegetarianFood,places.location,places.formattedAddress"
     }
     
     json_data = {
@@ -55,7 +53,6 @@ def fetch_local_vegetarian_data(location_string: str) -> pd.DataFrame:
                 "review_count": place.get('userRatingCount', 0),
                 "price_level_raw": price_str,
                 "vegetarian_served": place.get('vegetarianServed', False),
-                "vegan_served": place.get('veganServed', False),
                 "lat": place.get('location', {}).get('latitude'),
                 "lon": place.get('location', {}).get('longitude'),
                 "address": place.get('formattedAddress', '')
@@ -82,6 +79,6 @@ if __name__ == "__main__":
     
     if not test_df.empty:
         print("\nSuccess! Vegetarian data pipeline running perfectly. Sample Output:")
-        print(test_df[['name', 'rating', 'review_count', 'vegetarian_served', 'vegan_served']].head())
+        print(test_df[['name', 'rating', 'review_count', 'vegetarian_served']].head())
     else:
         print("\nPipeline returned an empty dataframe. Double check your API key and network connection.")
