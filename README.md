@@ -2,6 +2,8 @@
 
 Discover vegetarian-friendly restaurants in any neighborhood, scored by Google ratings plus plant-based sentiment signals from review and editorial text.
 
+**[Link: https://green-plate-value-engine-hfkubkoqdb8kz7lmrjamqt.streamlit.app/]**
+
 ## Features
 
 - **Location search** — Enter a neighborhood or city to find nearby vegetarian restaurants via the Google Places API
