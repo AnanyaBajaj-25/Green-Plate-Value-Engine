@@ -15,9 +15,6 @@ def process_restaurant_analytics(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
 
-    # =========================================================================
-    # STEP 1: DATA CLEANING & CATEGORICAL MAPPING
-    # =========================================================================
     price_map = {
         "PRICE_LEVEL_INEXPENSIVE": 1,
         "PRICE_LEVEL_MODERATE": 2,
@@ -28,9 +25,7 @@ def process_restaurant_analytics(df: pd.DataFrame) -> pd.DataFrame:
     df["rating"] = df["rating"].fillna(0.0)
     df["review_count"] = df["review_count"].fillna(0).astype(int)
 
-    # =========================================================================
-    # STEP 2: MACHINE LEARNING (ISOLATION FOREST ANOMALY DETECTION)
-    # =========================================================================
+
     required = ["rating", "review_count", "value_score", "price_numeric"]
     missing = [c for c in required if c not in df.columns]
     if missing:
@@ -43,10 +38,46 @@ def process_restaurant_analytics(df: pd.DataFrame) -> pd.DataFrame:
     clf = IsolationForest(contamination=0.15, random_state=42)
     df["anomaly_code"] = clf.fit_predict(X)
     df["data_integrity"] = np.where(
-        df["anomaly_code"] == -1, "⚠️ Suspicious Outlier", "✅ Verified Profile"
+        df["anomaly_code"] == -1, "Suspicious Outlier", "Verified Profile"
     )
 
     return df
+
+
+_PRICE_KEYS = {
+  1: "PRICE_LEVEL_INEXPENSIVE",
+  2: "PRICE_LEVEL_MODERATE",
+  3: "PRICE_LEVEL_EXPENSIVE",
+  4: "PRICE_LEVEL_VERY_EXPENSIVE",
+}
+
+_PRICE_LABELS = {
+    "PRICE_LEVEL_INEXPENSIVE": "Budget",
+    "PRICE_LEVEL_MODERATE": "Moderate",
+    "PRICE_LEVEL_EXPENSIVE": "Upscale",
+    "PRICE_LEVEL_VERY_EXPENSIVE": "Fine dining",
+}
+
+_PRICE_SYMBOLS = {
+    "PRICE_LEVEL_INEXPENSIVE": "$",
+    "PRICE_LEVEL_MODERATE": "$$",
+    "PRICE_LEVEL_EXPENSIVE": "$$$",
+    "PRICE_LEVEL_VERY_EXPENSIVE": "$$$$",
+}
+
+
+def _normalize_price_level(raw) -> str:
+    if raw is None or (isinstance(raw, float) and np.isnan(raw)):
+        return "PRICE_LEVEL_MODERATE"
+    if isinstance(raw, (int, float)) and not np.isnan(raw):
+        return _PRICE_KEYS.get(int(raw), "PRICE_LEVEL_MODERATE")
+    raw_str = str(raw).strip().upper()
+    if raw_str in _PRICE_LABELS:
+        return raw_str
+    for key in _PRICE_LABELS:
+        if key in raw_str:
+            return key
+    return "PRICE_LEVEL_MODERATE"
 
 
 def get_neighborhood_insights(df: pd.DataFrame) -> dict:
@@ -54,29 +85,35 @@ def get_neighborhood_insights(df: pd.DataFrame) -> dict:
     Aggregates macro-level metrics for the top dashboard cards.
     """
     if df.empty:
-        return {"density_pct": "0%", "avg_cost": "N/A", "top_rated": "N/A"}
+        return {
+            "density_pct": "0%",
+            "avg_cost": "N/A",
+            "avg_cost_detail": "",
+            "top_rated": "N/A",
+        }
 
     total_spots = len(df)
     elite_spots = len(df[df["value_score"] >= 4.5])
     density_pct = f"{int((elite_spots / total_spots) * 100)}%" if total_spots > 0 else "0%"
 
-    mode_price = df["price_level_raw"].mode()
-    price_map = {
-        "PRICE_LEVEL_INEXPENSIVE": "$",
-        "PRICE_LEVEL_MODERATE": "$$",
-        "PRICE_LEVEL_EXPENSIVE": "$$$",
-        "PRICE_LEVEL_VERY_EXPENSIVE": "$$$$",
-    }
-    avg_cost = price_map.get(mode_price[0], "$$") if not mode_price.empty else "$$"
+    normalized_prices = df["price_level_raw"].map(_normalize_price_level)
+    mode_price = normalized_prices.mode()
+    typical_key = mode_price.iloc[0] if not mode_price.empty else "PRICE_LEVEL_MODERATE"
+    avg_cost = _PRICE_LABELS.get(typical_key, "Moderate")
+    avg_cost_detail = _PRICE_SYMBOLS.get(typical_key, "$$")
 
-    # idxmax() is explicit — doesn't rely on the DataFrame being pre-sorted
     top_rated = (
         df.loc[df["value_score"].idxmax(), "name"]
         if "name" in df.columns
         else "Unknown"
     )
 
-    return {"density_pct": density_pct, "avg_cost": avg_cost, "top_rated": top_rated}
+    return {
+        "density_pct": density_pct,
+        "avg_cost": avg_cost,
+        "avg_cost_detail": avg_cost_detail,
+        "top_rated": top_rated,
+    }
 
 
 def _generate_fallback_text(base_score: float, restaurant_name: str) -> str:
@@ -123,7 +160,7 @@ def calculate_sentiment_boost_from_text(
     source = "api_text_signals"
     if not text or not text.strip():
         print(
-            f"  ℹ️  No text signals from API for '{restaurant_name}' — using synthetic fallback."
+            f" No text signals from API for '{restaurant_name}' — using synthetic fallback."
         )
         text = _generate_fallback_text(base_score, restaurant_name)
         source = "synthetic_fallback"
