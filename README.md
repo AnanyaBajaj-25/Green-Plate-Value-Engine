@@ -67,6 +67,20 @@ pip install -r requirements.txt
 GOOGLE_PLACES_API_KEY=your_api_key_here
 ```
 
+### Streamlit Community Cloud
+
+`.env` is not deployed (and should stay gitignored). Add your key in the cloud app instead:
+
+1. Open your app on [share.streamlit.io](https://share.streamlit.io)
+2. Go to **App settings** → **Secrets**
+3. Paste:
+
+```toml
+GOOGLE_PLACES_API_KEY = "your_api_key_here"
+```
+
+4. Save and reboot the app
+
 ## Usage
 
 ### Streamlit app

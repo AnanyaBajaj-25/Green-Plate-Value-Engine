@@ -4,8 +4,21 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
+def _load_api_key() -> str | None:
+  """Local dev: .env file. Streamlit Cloud: App settings → Secrets."""
+  load_dotenv()
+  key = os.getenv("GOOGLE_PLACES_API_KEY")
+  if key:
+    return key
+  try:
+    import streamlit as st
+
+    return st.secrets.get("GOOGLE_PLACES_API_KEY")
+  except Exception:
+    return None
+
+
+API_KEY = _load_api_key()
 
 
 def fetch_local_vegetarian_data(location_string: str) -> pd.DataFrame:
@@ -14,7 +27,10 @@ def fetch_local_vegetarian_data(location_string: str) -> pd.DataFrame:
     Flattens the nested JSON response into a clean, flat Pandas DataFrame.
     """
     if not API_KEY:
-        raise ValueError("Missing GOOGLE_PLACES_API_KEY. Please verify your .env file.")
+        raise ValueError(
+            "Missing GOOGLE_PLACES_API_KEY. "
+            "Locally: add it to .env. On Streamlit Cloud: App settings → Secrets."
+        )
 
     url = "https://places.googleapis.com/v1/places:searchText"
 
