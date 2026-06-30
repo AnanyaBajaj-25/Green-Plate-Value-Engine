@@ -126,7 +126,3 @@ An `IsolationForest` (contamination = 0.15) is fit on `[rating, review_count, va
 
 Built as a portfolio project demonstrating API integration, lightweight NLP, unsupervised anomaly detection, and interactive geospatial visualization with Streamlit.
 
-
-## License
-
-No license file is included yet. Add one if you plan to open-source or share this project.
